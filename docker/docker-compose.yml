@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: productivity_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ProductivityDb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Backend
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile.api
+    container_name: productivity_api
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=ProductivityDb;User=user;Password=password;
+      - Jwt__Key=YourSecretKeyHere_ThisShouldBeAtLeast32CharactersLong
+      - Jwt__Issuer=MonkMode
+      - Jwt__Audience=MonkModeClient
+      - Jwt__ExpiryInDays=7
+    ports:
+      - "7110:7110"
+      - "5076:5076"
+    volumes:
+      - ./logs:/app/logs
+
+  # Frontend Client
+  client:
+    build:
+      context: ./ClientApp
+      dockerfile: Dockerfile.client
+    container_name: productivity_client
+    restart: always
+    depends_on:
+      - api
+    environment:
+      - REACT_APP_API_URL=https://localhost:7110/api
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:

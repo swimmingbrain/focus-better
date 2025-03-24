@@ -1,0 +1,6 @@
+@MonkMode_HostAddress = http://localhost:5233
+
+GET {{MonkMode_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
